@@ -17,7 +17,7 @@ export class ExpenseService {
   // Automatically uses localhost when testing locally, or your live Render URL when deployed
   private baseUrl = window.location.hostname === 'localhost'
     ? 'http://localhost:3000/api'
-    : 'https://YOUR-RENDER-APP-NAME.onrender.com/api';
+    :'https://expense-tracker-22ma.onrender.com/api';
 
   private getHeaders(): HttpHeaders {
     const token = localStorage.getItem('token') || '';
