@@ -1,0 +1,291 @@
+﻿<!-- TOP NAVIGATION & 3-STEP PROGRESS BAR -->
+<header class="navbar">
+  <div class="brand-logo">
+    <span class="logo-dot"></span>
+    <span>FinTrack</span>
+  </div>
+
+  <div class="stepper-container">
+    <div class="step" [class.active]="currentStep === 'auth'" [class.completed]="currentStep !== 'auth'">
+      <span class="step-num">{{ currentStep !== 'auth' ? '✓' : '1' }}</span>
+      <span>Account</span>
+    </div>
+    <div class="step-line" [class.completed-line]="currentStep !== 'auth'"></div>
+    <div class="step" [class.active]="currentStep === 'setup'" [class.completed]="currentStep === 'dashboard'">
+      <span class="step-num">{{ currentStep === 'dashboard' ? '✓' : '2' }}</span>
+      <span>Monthly Salary</span>
+    </div>
+    <div class="step-line" [class.completed-line]="currentStep === 'dashboard'"></div>
+    <div class="step" [class.active]="currentStep === 'dashboard'">
+      <span class="step-num">3</span>
+      <span>Expense Tracker</span>
+    </div>
+  </div>
+
+  <div class="nav-user" *ngIf="currentStep !== 'auth'">
+    <span class="user-pill">{{ currentUserName }}</span>
+  </div>
+</header>
+
+<!-- CONFIRMATION TOAST -->
+<div class="toast-banner" *ngIf="toastMessage">{{ toastMessage }}</div>
+
+<!-- PAGE 1: LOGIN / CREATE ACCOUNT -->
+<div class="auth-wrapper" *ngIf="currentStep === 'auth'">
+  <div class="auth-card">
+    <span class="eyebrow">PERSONAL FINANCE WORKSPACE</span>
+    <h2>{{ isRegisterMode ? 'Create your account' : 'Sign in to your account' }}</h2>
+    <p class="sub-desc">Track your monthly budget and daily expenses in one place.</p>
+
+    <div class="error-box" *ngIf="authError">{{ authError }}</div>
+
+    <form (ngSubmit)="submitAuth()">
+      <div class="field-group" *ngIf="isRegisterMode">
+        <label class="field-label">Full Name</label>
+        <input type="text" [(ngModel)]="authForm.name" name="name" placeholder="Akash A" required />
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Email Address</label>
+        <input type="email" [(ngModel)]="authForm.email" name="email" placeholder="name@example.com" required />
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Password</label>
+        <input type="password" [(ngModel)]="authForm.password" name="password" placeholder="Enter your password" required />
+      </div>
+
+      <button type="submit" class="primary-submit-btn">{{ isRegisterMode ? 'Create Account & Continue' : 'Sign In & Continue' }}</button>
+    </form>
+
+    <p class="switch-text">
+      {{ isRegisterMode ? 'Already have an account?' : "Don't have an account?" }}
+      <a (click)="toggleAuthMode()">{{ isRegisterMode ? 'Sign in' : 'Create an account' }}</a>
+    </p>
+  </div>
+</div>
+
+<!-- PAGE 2: REAL-TIME MONTHLY SALARY & MONTH SETUP -->
+<div class="auth-wrapper" *ngIf="currentStep === 'setup'">
+  <div class="auth-card">
+    <div class="setup-top">
+      <span class="live-badge">Live Calendar: {{ getMonthLabel(realTimeMonth) }}</span>
+      <a class="mini-logout" (click)="logout()">Sign out</a>
+    </div>
+    <h2>Log in to {{ getMonthLabel(setupForm.month) }}</h2>
+    <p class="sub-desc">Confirm your active month and set your monthly salary to open your daily expense tracker.</p>
+
+    <div class="error-box" *ngIf="setupError">{{ setupError }}</div>
+
+    <form (ngSubmit)="submitSetup()">
+      <div class="field-group">
+        <div class="month-row">
+          <label class="field-label">Selected Month</label>
+          <button type="button" *ngIf="setupForm.month !== realTimeMonth" class="sync-pill" (click)="useCurrentMonth()">
+            Reset to {{ getMonthLabel(realTimeMonth) }}
+          </button>
+        </div>
+        <input type="month" [(ngModel)]="setupForm.month" name="month" required />
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Monthly Salary / Income</label>
+        <div class="currency-input-box">
+          <span class="currency-symbol">₹</span>
+          <input type="number" [(ngModel)]="setupForm.income" name="income" placeholder="25000" min="1" required />
+        </div>
+      </div>
+
+      <button type="submit" class="primary-submit-btn">Open {{ getMonthLabel(setupForm.month) }} Tracker &rarr;</button>
+    </form>
+  </div>
+</div>
+
+<!-- PAGE 3: PROFESSIONAL EXPENSE TRACKING DASHBOARD -->
+<div class="container" *ngIf="currentStep === 'dashboard'">
+  <div class="top-bar">
+    <div>
+      <h1>{{ getMonthLabel(setupForm.month) }} Overview</h1>
+      <span class="user-sub">Monthly budget & daily expense ledger</span>
+    </div>
+    <div class="user-controls">
+      <button class="secondary-btn" (click)="openSetupPage()">Change Month / Salary</button>
+      <button class="logout-btn" (click)="logout()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- Clean Fintech KPI Summary Cards -->
+  <div class="summary-grid">
+    <div class="kpi-card kpi-income">
+      <span class="kpi-label">MONTHLY SALARY</span>
+      <div class="kpi-value">₹{{ totalIncome | number:'1.2-2' }}</div>
+      <span class="kpi-foot">{{ getMonthLabel(setupForm.month) }}</span>
+    </div>
+    <div class="kpi-card kpi-expense">
+      <span class="kpi-label">TOTAL SPENT</span>
+      <div class="kpi-value">₹{{ totalExpense | number:'1.2-2' }}</div>
+      <span class="kpi-foot">{{ spentPercentage }}% of monthly budget</span>
+    </div>
+    <div class="kpi-card kpi-balance">
+      <span class="kpi-label">REMAINING BALANCE</span>
+      <div class="kpi-value">₹{{ balance | number:'1.2-2' }}</div>
+      <span class="kpi-foot">{{ balance >= 0 ? 'Available to spend' : 'Over monthly limit' }}</span>
+    </div>
+  </div>
+
+  <!-- Budget Progress Bar -->
+  <div class="budget-bar-panel">
+    <div class="budget-bar-header">
+      <span>Budget Utilization: <strong>{{ spentPercentage }}%</strong></span>
+      <span *ngIf="balance < 0" class="over-budget-alert">Exceeded budget by ₹{{ (-balance) | number:'1.2-2' }}</span>
+      <span *ngIf="balance >= 0" class="safe-budget-text">₹{{ balance | number:'1.2-2' }} remaining</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill"
+           [style.width.%]="spentPercentage"
+           [class.warn]="spentPercentage >= 70 && spentPercentage < 90"
+           [class.danger]="spentPercentage >= 90">
+      </div>
+    </div>
+  </div>
+
+  <!-- DAY SWAPPER BAR (< Previous Day | Active Date | Next Day >) -->
+  <div class="day-switcher-bar">
+    <button type="button" class="nav-arrow" (click)="changeDay(-1)" [disabled]="!canGoPrevDay()" title="Previous Day">&larr;</button>
+
+    <div class="active-day-display">
+      <span class="today-pill" *ngIf="activeDate === realTimeToday">TODAY</span>
+      <span class="day-title">{{ getFormattedActiveDate() }}</span>
+      <span class="day-spent-tag">Day Total: ₹{{ dailyTotal | number:'1.2-2' }}</span>
+    </div>
+
+    <button type="button" class="nav-arrow" (click)="changeDay(1)" [disabled]="!canGoNextDay()" title="Next Day">&rarr;</button>
+  </div>
+
+  <div class="main-grid">
+    <!-- UPGRADED ADD EXPENSE PANEL -->
+    <div class="panel">
+      <div class="panel-header-flex">
+        <h2>{{ editingId ? 'Edit Expense' : 'Record Expense' }}</h2>
+        <span class="time-suggest-badge" *ngIf="!editingId">Suggested: {{ suggestedPresetLabel }}</span>
+      </div>
+
+      <form (ngSubmit)="saveExpense()">
+        <div class="field-group">
+          <label class="micro-label">QUICK SELECT (TIME-SYNCED)</label>
+          <div class="preset-chips-grid">
+            <button type="button"
+                    *ngFor="let item of orderedPresets"
+                    class="preset-chip"
+                    [class.selected-chip]="selectedPreset === item.label && !customTitle"
+                    (click)="selectPreset(item)">
+              <span>{{ item.label }}</span>
+              <span class="now-dot" *ngIf="item.label === suggestedPresetLabel">Now</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="micro-label">CUSTOM ITEM (OPTIONAL)</label>
+          <input type="text"
+                 [(ngModel)]="customTitle"
+                 (input)="onCustomTitleInput()"
+                 name="customTitle"
+                 placeholder="Or type custom expense (e.g., Metro Ticket, Groceries)" />
+        </div>
+
+        <div class="field-group">
+          <label class="micro-label">AMOUNT</label>
+          <div class="currency-input-box">
+            <span class="currency-symbol">₹</span>
+            <input type="number"
+                   [(ngModel)]="amountInput"
+                   name="amount"
+                   placeholder="0.00"
+                   min="1"
+                   required />
+          </div>
+          <div class="quick-amount-row">
+            <button type="button" class="amt-chip" *ngFor="let amt of quickAmounts" (click)="addQuickAmount(amt)">
+              +₹{{ amt }}
+            </button>
+            <button type="button" class="amt-chip clear-amt" *ngIf="amountInput" (click)="amountInput = null">
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <div class="two-col-row">
+          <div class="field-group">
+            <label class="micro-label">CATEGORY</label>
+            <select [(ngModel)]="selectedCategory" name="category">
+              <option *ngFor="let cat of expenseCategories" [value]="cat">{{ cat }}</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="micro-label">DATE</label>
+            <input type="date" [(ngModel)]="activeDate" (ngModelChange)="onDatePickerChange($event)" name="date" required />
+          </div>
+        </div>
+
+        <button type="submit" class="primary-submit-btn" [disabled]="!getEffectiveTitle() || !amountInput || amountInput <= 0">
+          {{ editingId ? 'Save Changes' : 'Add ' + (getEffectiveTitle() || 'Expense') + (amountInput ? ' — ₹' + amountInput : '') }}
+        </button>
+        <button type="button" *ngIf="editingId" (click)="resetForm()" class="cancel-btn">Cancel Edit</button>
+      </form>
+    </div>
+
+    <!-- Chart Visualization -->
+    <div class="panel chart-panel">
+      <div class="panel-header-flex">
+        <h2>Category Breakdown</h2>
+        <span class="muted-tag">{{ getMonthLabel(setupForm.month) }}</span>
+      </div>
+      <div class="chart-wrapper" *ngIf="expenseList.length > 0">
+        <canvas id="expenseChart"></canvas>
+      </div>
+      <div class="empty-chart" *ngIf="expenseList.length === 0">
+        Add an expense to view category distribution.
+      </div>
+    </div>
+  </div>
+
+  <!-- Expense History Table -->
+  <div class="panel">
+    <div class="table-header-row">
+      <h2>{{ showAllMonthExpenses ? 'All Expenses (' + getMonthLabel(setupForm.month) + ')' : 'Expenses — ' + getFormattedActiveDate() }}</h2>
+      <div class="view-toggle">
+        <button type="button" [class.active-tab]="!showAllMonthExpenses" (click)="showAllMonthExpenses = false; updateDisplayedExpenses()">Selected Day</button>
+        <button type="button" [class.active-tab]="showAllMonthExpenses" (click)="showAllMonthExpenses = true; updateDisplayedExpenses()">Full Month</button>
+      </div>
+    </div>
+
+    <p class="empty-msg" *ngIf="displayedExpenses.length === 0">
+      No expenses recorded for {{ showAllMonthExpenses ? getMonthLabel(setupForm.month) : getFormattedActiveDate() }}.
+    </p>
+
+    <table *ngIf="displayedExpenses.length > 0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Expense</th>
+          <th>Category</th>
+          <th>Amount</th>
+          <th class="right-align">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let tx of displayedExpenses">
+          <td class="muted-cell">{{ tx.transaction_date | date:'dd MMM yyyy' }}</td>
+          <td class="bold-cell">{{ tx.title }}</td>
+          <td><span class="cat-badge">{{ tx.category }}</span></td>
+          <td class="amount-cell">-₹{{ tx.amount | number:'1.2-2' }}</td>
+          <td class="right-align">
+            <button class="tbl-btn edit-btn" (click)="editExpense(tx)">Edit</button>
+            <button class="tbl-btn del-btn" (click)="deleteExpense(tx.id!)">Delete</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
